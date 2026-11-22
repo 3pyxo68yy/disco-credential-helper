@@ -22,10 +22,13 @@ registry in the cluster.
 
 | tag | meaning |
 |---|---|
-| `v1.8.6-goamd64v1` | upstream tag v1.8.6, built for x86-64-v1 CPUs |
+| `v1.8.6-goamd64v1-2026.11.22` | upstream v1.8.6, v1 build, 2026-11-22 rebuild (added ca-certificates) |
 | `latest` | same as the most recent build |
 
-The tag always encodes the upstream tag: `<upstream-tag>-goamd64v1`.
+The tag always encodes the upstream tag: `<upstream-tag>-goamd64v1-<rebuild-date>`.
+The date suffix exists because Kubernetes nodes cache images by tag: any
+change to the image content (new base, new packages) must move the tag or
+stale nodes keep running the old content.
 
 ## Rebuilding (e.g. to pick up upstream v1.8.7)
 
