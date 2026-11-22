@@ -10,5 +10,5 @@
 # the default GOAMD64=v1 (the upstream Makefile sets no GOAMD64), on a
 # debian:bookworm-slim base whose glibc is v1-compatible.
 FROM debian:bookworm-slim
-COPY build/bin/aws_signing_helper /usr/local/bin/aws_signing_helper
+COPY upstream/build/bin/aws_signing_helper /usr/local/bin/aws_signing_helper
 ENTRYPOINT ["aws_signing_helper"]

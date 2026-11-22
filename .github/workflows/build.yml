@@ -16,18 +16,23 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Check out this repo (Dockerfile)
+        uses: actions/checkout@v4
+
       - name: Check out upstream at the pinned tag
         uses: actions/checkout@v4
         with:
           repository: aws/rolesanywhere-credential-helper
           ref: ${{ inputs.tag || 'v1.8.6' }}
+          path: upstream
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version-file: upstream/go.mod
 
       - name: Build (upstream Makefile; GOAMD64 defaults to v1)
+        working-directory: upstream
         run: make release
 
       - name: Compute image tag
