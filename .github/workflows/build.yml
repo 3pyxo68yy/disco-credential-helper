@@ -1,0 +1,76 @@
+name: build
+
+# Rebuild the x86-64-v1 credential-helper image from a pinned upstream tag
+# and push it to ghcr.io (public, so the disco cluster can pull anonymously).
+#
+# Trigger:  gh workflow run build.yml -f tag=v1.8.6
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: upstream tag from aws/rolesanywhere-credential-helper
+        required: false
+        default: v1.8.6
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out upstream at the pinned tag
+        uses: actions/checkout@v4
+        with:
+          repository: aws/rolesanywhere-credential-helper
+          ref: ${{ inputs.tag || 'v1.8.6' }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build (upstream Makefile; GOAMD64 defaults to v1)
+        run: make release
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value={{ inputs.tag || 'v1.8.6' }}-goamd64v1
+            type=raw,value=latest
+
+      - name: Set up QEMU/buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push (linux/amd64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Make the package public (anonymous cluster pulls)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PKG_ID=$(gh api -H "Accept: application/vnd.github+json" "/user/packages?per_page=100" \
+            | /usr/bin/python3 -c "
+            import json,sys
+            for p in json.load(sys.stdin):
+                if p['name'] == 'disco-credential-helper' and p['type'] == 'CONTAINER':
+                    print(p['id']); break
+            else:
+                sys.exit('package not found yet')")
+          echo "package id: $PKG_ID"
+          gh api -X PATCH -H "Accept: application/vnd.github+json" \
+            -f visibility=public "/user/packages/$PKG_ID/containers"
