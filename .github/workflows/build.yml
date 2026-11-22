@@ -30,13 +30,16 @@ jobs:
       - name: Build (upstream Makefile; GOAMD64 defaults to v1)
         run: make release
 
+      - name: Compute image tag
+        run: echo "TAG=${{ inputs.tag || 'v1.8.6' }}-goamd64v1" >> "$GITHUB_ENV"
+
       - name: Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=raw,value={{ inputs.tag || 'v1.8.6' }}-goamd64v1
+            type=raw,value={{ env.TAG }}
             type=raw,value=latest
 
       - name: Set up QEMU/buildx
